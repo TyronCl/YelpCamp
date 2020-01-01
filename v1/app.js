@@ -1,6 +1,12 @@
-var express = require("express");
-var app = express();
-var bodyParser = require("body-parser");
+var express = require("express"),
+  app = express(),
+  bodyParser = require("body-parser"),
+  mongoose = require("mongoose")
+
+mongoose.connect("mongodb://localhost:3000/yelp_camp", {
+  useNewUrlParser: true,
+  useUnifiedTopology: true
+});
 
 app.use(bodyParser.urlencoded({
   extended: true
@@ -8,27 +14,30 @@ app.use(bodyParser.urlencoded({
 
 app.set("view engine", "ejs");
 
+//SCHEMA SETUP
+var campgroundSchema = new mongoose.Schema({
+  name: String,
+  image: String
+});
+
+var Campground = mongoose.model("Campground", campgroundSchema);
+
+
 app.get("/", function (req, res) {
   res.render("landing");
 });
 
-var campgrounds = [{
-    name: "Salmon Creek",
-    image: "https://pixabay.com/get/52e3d5404957a514f6da8c7dda793f7f1636dfe2564c704c72287fd79248cc5a_340.jpg"
-  },
-  {
-    name: "Granite Hill",
-    image: "https://pixabay.com/get/55e8dc404f5aab14f6da8c7dda793f7f1636dfe2564c704c72287fd79248cc5a_340.jpg"
-  },
-  {
-    name: "Mountain Goat's Rest",
-    image: "https://pixabay.com/get/57e8d0424a5bae14f6da8c7dda793f7f1636dfe2564c704c72287fd29245c15b_340.jpg"
-  }
-];
 // shows all campgrounds
 app.get("/campgrounds", function (req, res) {
-  res.render("campgrounds", {
-    campgrounds: campgrounds
+  // Get all campgrounds from DB
+  Campground.find({}, function (err, allCampgrounds) {
+    if (err) {
+      console.log(err);
+    } else {
+      res.render("campgrounds", {
+        campgrounds: allCampgrounds
+      });
+    }
   });
 });
 // logic for making new campground 
@@ -40,9 +49,14 @@ app.post("/campgrounds", function (req, res) {
     name: name,
     image: image
   }
-  campgrounds.push(newCampground)
-  // redirect back to campgrounds page
-  res.redirect("/campgrounds");
+  // Create a new campground and save to DB
+  Campground.create(newCampground, function (err, newlyCreated) {
+    if (err) {
+      console.log(err);
+    } else {
+      res.redirect("/campgrounds");
+    }
+  });
 });
 // shows form
 app.get("/campgrounds/new", function (req, res) {
